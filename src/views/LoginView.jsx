@@ -39,7 +39,7 @@ export default function LoginView() {
             Gestión de<br />competencias
           </h1>
           <p style={{ color: '#888', fontSize: 14, lineHeight: 1.6 }}>
-            Plataforma de desarrollo organizacional para Chile, Colombia y Perú.
+            Plataforma de desarrollo organizacional para Chile, Colombia, Perú y Argentina.
           </p>
         </div>
         <div>
