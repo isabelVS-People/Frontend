@@ -10,77 +10,65 @@ const roleLabels = {
   admin_rrhh: 'Administrador RRHH',
 };
 
-const roleColors = {
-  colaborador: { bg: '#E1F5EE', text: '#0F6E56' },
-  lider: { bg: '#EEEDFE', text: '#3C3489' },
-  admin_rrhh: { bg: '#FAEEDA', text: '#633806' },
+const rolePalettes = {
+  colaborador: { bg: '#EEEDFE', text: '#3C3489' },
+  lider:       { bg: '#E1F5EE', text: '#085041' },
+  admin_rrhh:  { bg: '#FAEEDA', text: '#633806' },
 };
 
 function AppShell() {
   const { currentUser, logout } = useAuth();
-
-  const roleColor = roleColors[currentUser.role] || roleColors.colaborador;
-
-  const navItems = {
-    colaborador: [
-      { label: 'Mi perfil y roles', icon: 'person' },
-    ],
-    lider: [
-      { label: 'Mi equipo', icon: 'group' },
-    ],
-    admin_rrhh: [
-      { label: 'Panel RRHH', icon: 'settings' },
-    ],
-  };
+  const p = rolePalettes[currentUser.role] || rolePalettes.colaborador;
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--color-background-tertiary)',
-      fontFamily: 'var(--font-sans)',
-    }}>
-      <div style={{
-        background: 'var(--color-background-primary)',
-        borderBottom: '0.5px solid var(--color-border-tertiary)',
+    <div style={{ minHeight: '100vh', background: '#F9F5F1', fontFamily: "'Inter', sans-serif" }}>
+
+      {/* Navbar */}
+      <nav style={{
+        background: '#131313',
         padding: '0 1.5rem',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         height: 52, position: 'sticky', top: 0, zIndex: 50,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 7,
-            background: '#534AB7',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-              <path d="M10 2L3 7v11h5v-5h4v5h5V7L10 2z" fill="white" fillOpacity="0.9"/>
-            </svg>
-          </div>
-          <span style={{ fontSize: 14, fontWeight: 500 }}>Gestión de competencias</span>
-          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 4 }}>· {currentUser.country}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ color: 'white', fontSize: 16, fontWeight: 700, letterSpacing: '.08em' }}>VISMA</span>
+          <span style={{ color: '#555', fontSize: 13 }}>|</span>
+          <span style={{ fontSize: 13, color: '#aaa' }}>Gestión de competencias</span>
+          <span style={{
+            background: '#EEEDFE', color: '#3C3489',
+            padding: '2px 8px', borderRadius: 4,
+            fontSize: 11, fontWeight: 500,
+          }}>{currentUser.country}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            background: roleColor.bg, color: roleColor.text,
-            padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 500,
+          <span style={{
+            background: p.bg, color: p.text,
+            padding: '3px 10px', borderRadius: 20,
+            fontSize: 11, fontWeight: 500,
           }}>
             {roleLabels[currentUser.role]}
-          </div>
-          <div style={{ fontSize: 13, fontWeight: 500 }}>{currentUser.name}</div>
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: '#ccc' }}>{currentUser.name}</span>
           <button onClick={logout} style={{
             fontSize: 12, padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
-            border: '0.5px solid var(--color-border-secondary)',
-            background: 'transparent', color: 'var(--color-text-secondary)',
+            border: '0.5px solid #444', background: 'transparent', color: '#aaa',
           }}>Salir</button>
         </div>
-      </div>
+      </nav>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '1.5rem 1rem' }}>
+      {/* Contenido */}
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '1.75rem 1rem' }}>
         <div style={{ marginBottom: '1.5rem' }}>
-          <h1 style={{ fontSize: 20, fontWeight: 500, margin: '0 0 2px' }}>
-            {roleLabels[currentUser.role]}
-          </h1>
-          <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{
+              width: 3, height: 22, borderRadius: 2,
+              background: 'linear-gradient(180deg, #FFAB65, #7F56FA)',
+            }} />
+            <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>
+              {roleLabels[currentUser.role]}
+            </h1>
+          </div>
+          <p style={{ fontSize: 13, color: '#5a5a58', marginLeft: 13 }}>
             {currentUser.role === 'colaborador' && 'Tu perfil, nivel de competencia y exploración de roles.'}
             {currentUser.role === 'lider' && 'Mapeo y gestión del nivel de competencias de tu equipo.'}
             {currentUser.role === 'admin_rrhh' && `Panel de administración · ${currentUser.country}`}
