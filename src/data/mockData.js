@@ -1,4 +1,4 @@
-export const COUNTRIES = ['Chile', 'Colombia', 'Perú'];
+export const COUNTRIES = ['Chile', 'Colombia', 'Perú', 'Argentina'];
 
 export const roleFamilies = [
   { id: 1, name: 'Tecnología & Desarrollo' },
@@ -107,4 +107,7 @@ export const users = [
   { id: 11, name: 'Rosa Ibáñez', email: 'rosa@empresa.com', role: 'lider', country: 'Chile', teamIds: [4, 5] },
   { id: 12, name: 'Jorge Méndez', email: 'jorge@empresa.com', role: 'lider', country: 'Chile', teamIds: [6] },
   { id: 99, name: 'Admin RRHH Chile', email: 'admin@empresa.com', role: 'admin_rrhh', country: 'Chile' },
+  { id: 100, name: 'Admin RRHH Colombia', email: 'admin.colombia@empresa.com', role: 'admin_rrhh', country: 'Colombia' },
+  { id: 101, name: 'Admin RRHH Perú', email: 'admin.peru@empresa.com', role: 'admin_rrhh', country: 'Perú' },
+  { id: 102, name: 'Admin RRHH Argentina', email: 'admin.argentina@empresa.com', role: 'admin_rrhh', country: 'Argentina' },
 ];
