@@ -111,3 +111,4 @@ export const users = [
   { id: 101, name: 'Admin RRHH Perú', email: 'admin.peru@empresa.com', role: 'admin_rrhh', country: 'Perú' },
   { id: 102, name: 'Admin RRHH Argentina', email: 'admin.argentina@empresa.com', role: 'admin_rrhh', country: 'Argentina' },
 ];
+// v2
