@@ -26,7 +26,7 @@ const api = {
     history: (id) => request(`/api/employees/${id}/history`),
   },
   roles: {
-    families: () => request('/api/families'),
+    families: () => request('/api/roles/families'),
   },
   requirements: {
     list: () => request('/api/requirements'),
