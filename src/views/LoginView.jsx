@@ -4,7 +4,7 @@ import { users } from '../data/mockData';
 import { GradientBar } from '../components/UI';
 
 export default function LoginView() {
-  const { login } = useAuth();
+  const { loginDemo } = useAuth();
   const [selected, setSelected] = useState('');
 
   const roleLabels = { colaborador: 'Colaborador', lider: 'Líder', admin_rrhh: 'Administrador RRHH' };
@@ -15,21 +15,12 @@ export default function LoginView() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      background: '#F9F5F1',
-      fontFamily: "'Inter', sans-serif",
-    }}>
-      {/* Panel izquierdo decorativo */}
+    <div style={{ minHeight: '100vh', display: 'flex', background: '#F9F5F1', fontFamily: "'Inter', sans-serif" }}>
+      {/* Panel izquierdo */}
       <div style={{
-        width: 400,
-        background: '#131313',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '2.5rem',
-        flexShrink: 0,
+        width: 400, background: '#131313', display: 'flex',
+        flexDirection: 'column', justifyContent: 'space-between',
+        padding: '2.5rem', flexShrink: 0,
       }} className="login-panel">
         <div>
           <div style={{ marginBottom: '3rem' }}>
@@ -44,27 +35,15 @@ export default function LoginView() {
         </div>
         <div>
           <div style={{ height: 3, background: 'linear-gradient(90deg, #FFAB65, #7F56FA)', borderRadius: 20, marginBottom: '1.5rem' }} />
-          <p style={{ color: '#555', fontSize: 12, lineHeight: 1.6 }}>
-            En producción el acceso se realiza vía SSO corporativo.
-          </p>
+          <p style={{ color: '#555', fontSize: 12, lineHeight: 1.6 }}>En producción el acceso se realiza vía SSO corporativo.</p>
         </div>
       </div>
 
-      {/* Panel derecho: login */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2rem',
-      }}>
-        <div style={{ width: '100%', maxWidth: 400 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 6, letterSpacing: '-0.01em' }}>
-            Seleccioná tu usuario
-          </h2>
-          <p style={{ fontSize: 13, color: '#5a5a58', marginBottom: '1.5rem' }}>
-            Simulando acceso SSO corporativo
-          </p>
+      {/* Panel derecho */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+        <div style={{ width: '100%', maxWidth: 420 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 6, letterSpacing: '-0.01em' }}>Seleccioná tu usuario</h2>
+          <p style={{ fontSize: 13, color: '#5a5a58', marginBottom: '1.5rem' }}>Simulando acceso SSO corporativo</p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: '1.5rem' }}>
             {users.map(u => {
@@ -76,8 +55,7 @@ export default function LoginView() {
                   padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
                   border: isSelected ? '1.5px solid #7F56FA' : '0.5px solid rgba(0,0,0,0.12)',
                   background: isSelected ? '#EEEDFE' : 'white',
-                  textAlign: 'left', width: '100%',
-                  transition: 'all 0.12s',
+                  textAlign: 'left', width: '100%', transition: 'all 0.12s',
                 }}>
                   <div style={{
                     width: 38, height: 38, borderRadius: '50%',
@@ -104,26 +82,21 @@ export default function LoginView() {
           </div>
 
           <button
-            onClick={() => selected && login(selected)}
+            onClick={() => selected && loginDemo(selected)}
             disabled={!selected}
             style={{
-              width: '100%', padding: '11px', borderRadius: 10, cursor: selected ? 'pointer' : 'not-allowed',
+              width: '100%', padding: '11px', borderRadius: 10,
+              cursor: selected ? 'pointer' : 'not-allowed',
               background: selected ? '#7F56FA' : '#D3D1C7',
               color: selected ? 'white' : '#888780',
-              border: 'none', fontSize: 14, fontWeight: 500,
-              transition: 'all 0.15s',
+              border: 'none', fontSize: 14, fontWeight: 500, transition: 'all 0.15s',
             }}
           >
             Ingresar
           </button>
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .login-panel { display: none !important; }
-        }
-      `}</style>
+      <style>{`@media (max-width: 768px) { .login-panel { display: none !important; } }`}</style>
     </div>
   );
 }
