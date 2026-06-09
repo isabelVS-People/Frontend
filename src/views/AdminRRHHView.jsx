@@ -1,3 +1,4 @@
+import { employees as mockEmps, additionalRequirements as mockReqs } from '../data/mockData';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { roles as mockRoles, roleFamilies as mockFamilies, getLevels } from '../data/mockData';
@@ -40,7 +41,6 @@ export default function AdminRRHHView() {
     }).catch(err => {
       console.error('Error cargando datos:', err);
       // Fallback a mock data si la API falla
-      const { employees: mockEmps, additionalRequirements: mockReqs } = require('../data/mockData');
       setEmpData(mockEmps.filter(e => e.country === myCountry));
       setReqs(mockReqs);
     }).finally(() => setLoading(false));
