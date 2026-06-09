@@ -1,5 +1,5 @@
 export function exportToExcel(employees, roles, roleFamilies, requirements, reqValues, history) {
-  // Build rows
+  // Build rows for employees sheet
   const rows = employees.map(emp => {
     const role = roles.find(r => r.id === emp.roleId) || {};
     const family = roleFamilies.find(f => f.id === role.familyId) || {};
