@@ -1,8 +1,16 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://backend-production-62417.up.railway.app';
 
+let _country = 'Chile';
+
+export const setApiCountry = (country) => { _country = country; };
+
 const request = async (path, options = {}) => {
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    headers: { 
+      'Content-Type': 'application/json',
+      'x-country': _country,
+      ...options.headers 
+    },
     ...options,
   });
   if (!res.ok) throw new Error(await res.text());
@@ -28,7 +36,11 @@ const api = {
     uploadEmployees: async (file) => {
       const form = new FormData();
       form.append('file', file);
-      const res = await fetch(`${BASE_URL}/api/bulk/employees`, { method: 'POST', body: form });
+      const res = await fetch(`${BASE_URL}/api/bulk/employees`, { 
+        method: 'POST', 
+        headers: { 'x-country': _country },
+        body: form 
+      });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },

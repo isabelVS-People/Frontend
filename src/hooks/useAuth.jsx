@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from 'react';
 import { users } from '../data/mockData';
+import { setApiCountry } from '../utils/api';
 
 const AuthContext = createContext(null);
 
@@ -9,6 +10,7 @@ export function AuthProvider({ children }) {
   function loginDemo(userId) {
     const user = users.find(u => String(u.id) === String(userId));
     if (user) setCurrentUser(user);
+    setApiCountry(user.country);
   }
 
   function logout() {
