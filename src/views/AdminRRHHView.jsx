@@ -5,6 +5,9 @@ import { roles as mockRoles, roleFamilies as mockFamilies, getLevels } from '../
 import api from '../utils/api';
 import { Badge, LevelDots, Modal, Card, SectionTitle, FilterBar, Avatar, StatCard, SuccessToast } from '../components/UI';
 
+const userRoleLabels = { admin_rrhh: 'People', lider: 'Líder', colaborador: 'Colaborador' };
+const userRoleColors = { admin_rrhh: 'amber', lider: 'teal', colaborador: 'gray' };
+
 export default function AdminRRHHView() {
   const { currentUser } = useAuth();
   const [empData, setEmpData] = useState([]);
@@ -256,7 +259,7 @@ export default function AdminRRHHView() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '0.5px solid rgba(0,0,0,0.10)' }}>
-                  {['Colaborador', 'Área', 'Familia', 'Rol', 'Nivel', 'Editar', 'Requisitos'].map(h => (
+                  {['Colaborador', 'Tipo', 'Área', 'Familia', 'Rol', 'Nivel', 'Editar', 'Requisitos'].map(h => (
                     <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 10, color: '#5a5a58', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -265,6 +268,7 @@ export default function AdminRRHHView() {
                 {filtered.map((emp, i) => {
                   const role = roles.find(r => r.id === (emp.role_id || emp.roleId)) || {};
                   const family = families.find(f => f.id === (role.familyId || role.family_id)) || {};
+                  const sysRole = emp.user_role;
                   return (
                     <tr key={emp.id} style={{ borderBottom: '0.5px solid rgba(0,0,0,0.07)', background: i % 2 === 0 ? 'transparent' : '#FAFAF9' }}>
                       <td style={{ padding: '11px 12px' }}>
@@ -275,6 +279,13 @@ export default function AdminRRHHView() {
                             <div style={{ fontSize: 11, color: '#5a5a58' }}>{emp.email}</div>
                           </div>
                         </div>
+                      </td>
+                      <td style={{ padding: '11px 12px' }}>
+                        {sysRole ? (
+                          <Badge color={userRoleColors[sysRole] || 'gray'}>{userRoleLabels[sysRole] || sysRole}</Badge>
+                        ) : (
+                          <span style={{ fontSize: 11, color: '#bbb' }}>Sin acceso</span>
+                        )}
                       </td>
                       <td style={{ padding: '11px 12px', color: '#5a5a58' }}>{emp.area}</td>
                       <td style={{ padding: '11px 12px', color: '#5a5a58', fontSize: 12 }}>{emp.family_name || family.name || '—'}</td>
@@ -290,7 +301,7 @@ export default function AdminRRHHView() {
                   );
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#5a5a58' }}>Sin colaboradores cargados. Usá la carga masiva para importar.</td></tr>
+                  <tr><td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#5a5a58' }}>Sin colaboradores cargados. Usá la carga masiva para importar.</td></tr>
                 )}
               </tbody>
             </table>
