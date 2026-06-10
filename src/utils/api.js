@@ -22,6 +22,7 @@ const request = async (path, options = {}) => {
 const api = {
   employees: {
     list: () => request('/api/employees'),
+    me: () => request('/api/employees/me'),
     update: (id, data) => request(`/api/employees/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     getRequirements: (id) => request(`/api/employees/${id}/requirements`),
     updateRequirements: (id, data) => request(`/api/employees/${id}/requirements`, { method: 'PUT', body: JSON.stringify(data) }),
