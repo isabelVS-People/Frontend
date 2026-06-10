@@ -1,69 +1,108 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import {
-  employees, roles, roleFamilies, getLevels,
-  changeHistory, additionalRequirements, requirementValues
-} from '../data/mockData';
+import { roles as mockRoles, roleFamilies as mockFamilies, getLevels } from '../data/mockData';
+import api from '../utils/api';
 import { Badge, LevelDots, Modal, Card, SectionTitle, FilterBar, Avatar, SuccessToast } from '../components/UI';
-import { exportToExcel } from '../utils/exportExcel';
+import ExplorarRolesTab from '../components/ExplorarRolesTab';
+
+const userRoleLabels = { admin_rrhh: 'People', lider: 'Líder', colaborador: 'Colaborador' };
+const userRoleColors = { admin_rrhh: 'amber', lider: 'teal', colaborador: 'gray' };
 
 export default function LiderView() {
   const { currentUser } = useAuth();
-  const [teamData, setTeamData] = useState(employees);
-  const [histData, setHistData] = useState(changeHistory);
+  const [teamData, setTeamData] = useState([]);
+  const [roles, setRoles] = useState(mockRoles);
+  const [families, setFamilies] = useState(mockFamilies);
+  const [history, setHistory] = useState([]);
   const [filters, setFilters] = useState({});
   const [editingEmp, setEditingEmp] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [tab, setTab] = useState('equipo');
   const [successMsg, setSuccessMsg] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const myTeamIds = currentUser.teamIds || [];
-  const myTeam = teamData.filter(e => myTeamIds.includes(e.id) && e.country === currentUser.country);
+  useEffect(() => {
+    Promise.all([
+      api.employees.list(),
+      api.roles.families(),
+    ]).then(([emps, fams]) => {
+      setTeamData(emps);
+      setFamilies(fams);
+      const allRoles = fams.flatMap(f => (f.roles || []).map(r => ({ ...r, familyId: f.id })));
+      setRoles(allRoles);
+    }).catch(err => {
+      console.error('Error cargando equipo:', err);
+    }).finally(() => setLoading(false));
+  }, []);
 
-  const filtered = myTeam.filter(e => {
-    const role = roles.find(r => r.id === e.roleId);
+  const flash = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
+
+  const filtered = teamData.filter(e => {
+    const role = roles.find(r => r.id === (e.role_id || e.roleId));
     if (filters.area && e.area !== filters.area) return false;
     if (filters.rol && role?.name !== filters.rol) return false;
-    if (filters.nivel && String(e.currentLevel) !== filters.nivel) return false;
+    if (filters.nivel && String(e.current_level || e.currentLevel) !== filters.nivel) return false;
     return true;
   });
 
-  const areas = [...new Set(myTeam.map(e => e.area))];
-  const roleNames = [...new Set(myTeam.map(e => roles.find(r => r.id === e.roleId)?.name).filter(Boolean))];
+  const areas = [...new Set(teamData.map(e => e.area).filter(Boolean))];
+  const roleNames = [...new Set(teamData.map(e => {
+    const r = roles.find(r => r.id === (e.role_id || e.roleId));
+    return r?.name;
+  }).filter(Boolean))];
+
+  const currentFamilyId = roles.find(r => r.id === parseInt(editForm.roleId))?.familyId || roles.find(r => r.id === parseInt(editForm.roleId))?.family_id;
+  const familyRoles = roles.filter(r => (r.familyId || r.family_id) === currentFamilyId);
 
   const openEdit = (emp) => {
     setEditingEmp(emp);
-    setEditForm({ roleId: emp.roleId, level: emp.currentLevel });
+    setEditForm({ roleId: emp.role_id || emp.roleId, level: emp.current_level || emp.currentLevel });
   };
 
-  const saveEdit = () => {
-    const newEntry = {
-      id: histData.length + 1,
-      employeeId: editingEmp.id,
-      changedBy: `Líder: ${currentUser.name}`,
-      changeDate: new Date().toISOString(),
-      prevRoleId: editingEmp.roleId,
-      newRoleId: parseInt(editForm.roleId),
-      prevLevel: editingEmp.currentLevel,
-      newLevel: parseInt(editForm.level),
-    };
-    setTeamData(prev => prev.map(e =>
-      e.id === editingEmp.id
-        ? { ...e, roleId: parseInt(editForm.roleId), currentLevel: parseInt(editForm.level) }
-        : e
-    ));
-    setHistData(prev => [newEntry, ...prev]);
-    setEditingEmp(null);
-    setSuccessMsg(`Cambios guardados para ${editingEmp.name}`);
-    setTimeout(() => setSuccessMsg(''), 3000);
+  const saveEdit = async () => {
+    try {
+      await api.employees.update(editingEmp.id, {
+        role_id: parseInt(editForm.roleId),
+        current_level: parseInt(editForm.level),
+      });
+      setTeamData(prev => prev.map(e =>
+        e.id === editingEmp.id
+          ? { ...e, role_id: parseInt(editForm.roleId), current_level: parseInt(editForm.level) }
+          : e
+      ));
+      setEditingEmp(null);
+      flash(`Cambios guardados para ${editingEmp.name}`);
+    } catch (err) {
+      flash(`Error: ${err.message}`);
+    }
   };
 
-  const myHistory = histData.filter(h => myTeamIds.includes(h.employeeId));
+  const loadHistory = async () => {
+    setLoading(true);
+    try {
+      const ids = teamData.map(e => e.id);
+      const results = await Promise.allSettled(ids.map(id => api.employees.history(id)));
+      const all = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+      setHistory(all.sort((a, b) => new Date(b.change_date) - new Date(a.change_date)));
+    } catch (err) {
+      console.error('Error cargando historial:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTabChange = (id) => {
+    setTab(id);
+    if (id === 'historial' && history.length === 0) loadHistory();
+  };
 
   const tabs = [
     { id: 'equipo', label: 'Mi equipo' },
+    { id: 'explorar', label: 'Explorar roles' },
     { id: 'historial', label: 'Historial' },
   ];
+
+  if (loading && tab !== 'historial') return <div style={{ padding: '3rem', textAlign: 'center', color: '#5a5a58' }}>Cargando equipo...</div>;
 
   return (
     <div style={{ position: 'relative' }}>
@@ -71,22 +110,17 @@ export default function LiderView() {
         <Modal title={`Editar: ${editingEmp.name}`} onClose={() => setEditingEmp(null)}>
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ fontSize: 12, color: '#5a5a58', display: 'block', marginBottom: 5, fontWeight: 500 }}>Familia de rol</label>
-            <select
-              value={roles.find(r => r.id === parseInt(editForm.roleId))?.familyId || ''}
-              onChange={e => {
-                const firstRole = roles.find(r => r.familyId === parseInt(e.target.value));
-                if (firstRole) setEditForm(f => ({ ...f, roleId: firstRole.id }));
-              }}
-            >
-              {roleFamilies.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            <select value={currentFamilyId || ''} onChange={e => {
+              const fr = roles.find(r => (r.familyId || r.family_id) === parseInt(e.target.value));
+              if (fr) setEditForm(f => ({ ...f, roleId: fr.id }));
+            }}>
+              {families.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ fontSize: 12, color: '#5a5a58', display: 'block', marginBottom: 5, fontWeight: 500 }}>Rol</label>
             <select value={editForm.roleId} onChange={e => setEditForm(f => ({ ...f, roleId: e.target.value }))}>
-              {roles
-                .filter(r => r.familyId === (roles.find(r2 => r2.id === parseInt(editForm.roleId))?.familyId))
-                .map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {familyRoles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
           <div style={{ marginBottom: '1.5rem' }}>
@@ -126,31 +160,21 @@ export default function LiderView() {
 
       <SuccessToast message={successMsg} />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              padding: '7px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 13,
-              border: tab === t.id ? '1.5px solid #7F56FA' : '0.5px solid rgba(0,0,0,0.15)',
-              background: tab === t.id ? '#EEEDFE' : 'white',
-              color: tab === t.id ? '#3C3489' : '#5a5a58',
-              fontWeight: tab === t.id ? 500 : 400,
-            }}>{t.label}</button>
-          ))}
-        </div>
-        <button onClick={() => exportToExcel(myTeam, roles, roleFamilies, additionalRequirements, requirementValues, myHistory)} style={{
-          padding: '7px 13px', borderRadius: 8, cursor: 'pointer', fontSize: 12,
-          border: '0.5px solid rgba(0,0,0,0.18)', background: 'white', color: '#5a5a58',
-        }}>
-          Exportar a Excel
-        </button>
+      <div style={{ display: 'flex', gap: 6, marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => handleTabChange(t.id)} style={{
+            padding: '7px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 13,
+            border: tab === t.id ? '1.5px solid #7F56FA' : '0.5px solid rgba(0,0,0,0.15)',
+            background: tab === t.id ? '#EEEDFE' : 'white',
+            color: tab === t.id ? '#3C3489' : '#5a5a58',
+            fontWeight: tab === t.id ? 500 : 400,
+          }}>{t.label}</button>
+        ))}
       </div>
 
       {tab === 'equipo' && (
         <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: 8 }}>
-            <SectionTitle>Mi equipo · {filtered.length} colaboradores</SectionTitle>
-          </div>
+          <SectionTitle>Mi equipo · {filtered.length} colaboradores</SectionTitle>
           <FilterBar
             filters={filters}
             onChange={(key, val) => setFilters(f => ({ ...f, [key]: val }))}
@@ -164,15 +188,16 @@ export default function LiderView() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '0.5px solid rgba(0,0,0,0.10)' }}>
-                  {['Colaborador', 'Área', 'Familia', 'Rol', 'Nivel', ''].map(h => (
+                  {['Colaborador', 'Tipo', 'Área', 'Familia', 'Rol', 'Nivel', ''].map(h => (
                     <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 10, color: '#5a5a58', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((emp, i) => {
-                  const role = roles.find(r => r.id === emp.roleId) || {};
-                  const family = roleFamilies.find(f => f.id === role.familyId) || {};
+                  const role = roles.find(r => r.id === (emp.role_id || emp.roleId)) || {};
+                  const family = families.find(f => f.id === (role.familyId || role.family_id)) || {};
+                  const sysRole = emp.user_role;
                   return (
                     <tr key={emp.id} style={{ borderBottom: '0.5px solid rgba(0,0,0,0.07)', background: i % 2 === 0 ? 'transparent' : '#FAFAF9' }}>
                       <td style={{ padding: '11px 12px' }}>
@@ -184,10 +209,17 @@ export default function LiderView() {
                           </div>
                         </div>
                       </td>
+                      <td style={{ padding: '11px 12px' }}>
+                        {sysRole ? (
+                          <Badge color={userRoleColors[sysRole] || 'gray'}>{userRoleLabels[sysRole] || sysRole}</Badge>
+                        ) : (
+                          <span style={{ fontSize: 11, color: '#bbb' }}>Sin acceso</span>
+                        )}
+                      </td>
                       <td style={{ padding: '11px 12px', color: '#5a5a58' }}>{emp.area}</td>
-                      <td style={{ padding: '11px 12px', color: '#5a5a58', fontSize: 12 }}>{family.name || '—'}</td>
-                      <td style={{ padding: '11px 12px' }}>{role.name || '—'}</td>
-                      <td style={{ padding: '11px 12px' }}><LevelDots level={emp.currentLevel} /></td>
+                      <td style={{ padding: '11px 12px', color: '#5a5a58', fontSize: 12 }}>{emp.family_name || family.name || '—'}</td>
+                      <td style={{ padding: '11px 12px' }}>{emp.role_name || role.name || '—'}</td>
+                      <td style={{ padding: '11px 12px' }}><LevelDots level={emp.current_level || emp.currentLevel} /></td>
                       <td style={{ padding: '11px 12px' }}>
                         <button onClick={() => openEdit(emp)} style={{
                           padding: '5px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12,
@@ -198,7 +230,7 @@ export default function LiderView() {
                   );
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: '#5a5a58' }}>Sin resultados.</td></tr>
+                  <tr><td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#5a5a58' }}>Sin colaboradores asignados.</td></tr>
                 )}
               </tbody>
             </table>
@@ -206,10 +238,14 @@ export default function LiderView() {
         </Card>
       )}
 
+      {tab === 'explorar' && <ExplorarRolesTab families={families} />}
+
       {tab === 'historial' && (
         <Card>
           <SectionTitle>Historial del equipo</SectionTitle>
-          {myHistory.length === 0 ? (
+          {loading ? (
+            <p style={{ fontSize: 13, color: '#5a5a58', textAlign: 'center', padding: '2rem 0' }}>Cargando...</p>
+          ) : history.length === 0 ? (
             <p style={{ fontSize: 13, color: '#5a5a58', textAlign: 'center', padding: '2rem 0' }}>Sin cambios registrados.</p>
           ) : (
             <div style={{ overflowX: 'auto' }}>
@@ -222,24 +258,19 @@ export default function LiderView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {myHistory.map((h, i) => {
-                    const emp = employees.find(e => e.id === h.employeeId);
-                    const prevRole = roles.find(r => r.id === h.prevRoleId);
-                    const newRole = roles.find(r => r.id === h.newRoleId);
-                    return (
-                      <tr key={h.id} style={{ borderBottom: '0.5px solid rgba(0,0,0,0.07)', background: i % 2 === 0 ? 'transparent' : '#FAFAF9' }}>
-                        <td style={{ padding: '8px 10px', fontWeight: 500 }}>{emp?.name || '—'}</td>
-                        <td style={{ padding: '8px 10px', color: '#5a5a58', whiteSpace: 'nowrap' }}>{new Date(h.changeDate).toLocaleDateString('es-CL')}</td>
-                        <td style={{ padding: '8px 10px', color: '#5a5a58' }}>{h.changedBy}</td>
-                        <td style={{ padding: '8px 10px' }}><Badge color="gray">{prevRole?.name || '—'}</Badge></td>
-                        <td style={{ padding: '8px 10px' }}><Badge color={prevRole?.id !== newRole?.id ? 'teal' : 'gray'}>{newRole?.name || '—'}</Badge></td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>{h.prevLevel}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                          <Badge color={h.newLevel > h.prevLevel ? 'purple' : h.newLevel < h.prevLevel ? 'amber' : 'gray'}>{h.newLevel}</Badge>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {history.map((h, i) => (
+                    <tr key={h.id || i} style={{ borderBottom: '0.5px solid rgba(0,0,0,0.07)', background: i % 2 === 0 ? 'transparent' : '#FAFAF9' }}>
+                      <td style={{ padding: '8px 10px', fontWeight: 500 }}>{h.employee_name || '—'}</td>
+                      <td style={{ padding: '8px 10px', color: '#5a5a58', whiteSpace: 'nowrap' }}>{new Date(h.change_date).toLocaleDateString('es-CL')}</td>
+                      <td style={{ padding: '8px 10px', color: '#5a5a58' }}>{h.changed_by}</td>
+                      <td style={{ padding: '8px 10px' }}><Badge color="gray">{h.previous_role || '—'}</Badge></td>
+                      <td style={{ padding: '8px 10px' }}><Badge color={h.previous_role !== h.new_role ? 'teal' : 'gray'}>{h.new_role || '—'}</Badge></td>
+                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>{h.previous_level}</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                        <Badge color={h.new_level > h.previous_level ? 'purple' : h.new_level < h.previous_level ? 'amber' : 'gray'}>{h.new_level}</Badge>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

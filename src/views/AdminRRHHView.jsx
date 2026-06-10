@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { roles as mockRoles, roleFamilies as mockFamilies, getLevels } from '../data/mockData';
 import api from '../utils/api';
 import { Badge, LevelDots, Modal, Card, SectionTitle, FilterBar, Avatar, StatCard, SuccessToast } from '../components/UI';
+import ExplorarRolesTab from '../components/ExplorarRolesTab';
 
 const userRoleLabels = { admin_rrhh: 'People', lider: 'Líder', colaborador: 'Colaborador' };
 const userRoleColors = { admin_rrhh: 'amber', lider: 'teal', colaborador: 'gray' };
@@ -143,6 +144,7 @@ export default function AdminRRHHView() {
 
   const tabs = [
     { id: 'colaboradores', label: 'Colaboradores' },
+    { id: 'explorar', label: 'Explorar roles' },
     { id: 'requisitos', label: 'Requisitos' },
     { id: 'carga', label: 'Carga masiva' },
     { id: 'historial', label: 'Historial' },
@@ -308,6 +310,8 @@ export default function AdminRRHHView() {
           </div>
         </Card>
       )}
+
+      {tab === 'explorar' && <ExplorarRolesTab families={families} />}
 
       {tab === 'requisitos' && (
         <Card>
