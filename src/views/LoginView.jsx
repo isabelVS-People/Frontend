@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -107,7 +106,7 @@ export default function LoginView() {
                 EMAIL
               </label>
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="tu@empresa.com"
