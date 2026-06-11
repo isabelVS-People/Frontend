@@ -30,6 +30,12 @@ const api = {
   },
   roles: {
     families: () => request('/api/roles/families'),
+    familyCompetencies: (familyId) => request(`/api/roles/families/${familyId}/competencies`),
+    updateFamilyCompetency: (familyId, competencyName, level, description) =>
+      request(`/api/roles/families/${familyId}/competencies/${encodeURIComponent(competencyName)}/${level}`, {
+        method: 'PUT',
+        body: JSON.stringify({ description }),
+      }),
   },
   requirements: {
     list: () => request('/api/requirements'),
