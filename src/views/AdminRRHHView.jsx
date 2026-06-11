@@ -6,11 +6,12 @@ import api from '../utils/api';
 import { Badge, LevelDots, Modal, Card, SectionTitle, FilterBar, Avatar, StatCard, SuccessToast } from '../components/UI';
 import ExplorarRolesTab from '../components/ExplorarRolesTab';
 
-const userRoleLabels = { admin_rrhh: 'People', lider: 'Líder', colaborador: 'Colaborador' };
-const userRoleColors = { admin_rrhh: 'amber', lider: 'teal', colaborador: 'gray' };
+const userRoleLabels = { admin_rrhh: 'People', lider: 'Líder', colaborador: 'Colaborador', super_admin_rrhh: 'Super Admin' };
+const userRoleColors = { admin_rrhh: 'amber', lider: 'teal', colaborador: 'gray', super_admin_rrhh: 'purple' };
 
 export default function AdminRRHHView() {
   const { currentUser } = useAuth();
+  const isGlobalAdmin = currentUser.role === 'super_admin_rrhh';
   const [empData, setEmpData] = useState([]);
   const [roles, setRoles] = useState(mockRoles);
   const [families, setFamilies] = useState(mockFamilies);
@@ -26,9 +27,10 @@ export default function AdminRRHHView() {
   const [bulkMsg, setBulkMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const fileRef = useRef();
 
-  const myCountry = currentUser.country;
+  const myCountry = isGlobalAdmin ? 'Todos los países' : currentUser.country;
 
   useEffect(() => {
     Promise.all([
@@ -44,8 +46,9 @@ export default function AdminRRHHView() {
       setReqs(reqList);
     }).catch(err => {
       console.error('Error cargando datos:', err);
+      setLoadError(err.message || 'Error desconocido');
       // Fallback a mock data si la API falla
-      setEmpData(mockEmps.filter(e => e.country === myCountry));
+      setEmpData(isGlobalAdmin ? mockEmps : mockEmps.filter(e => e.country === currentUser.country));
       setReqs(mockReqs);
     }).finally(() => setLoading(false));
   }, []);
@@ -57,6 +60,7 @@ export default function AdminRRHHView() {
     if (filters.area && e.area !== filters.area) return false;
     if (filters.rol && role?.name !== filters.rol) return false;
     if (filters.nivel && String(e.current_level || e.currentLevel) !== filters.nivel) return false;
+    if (filters.pais && e.country !== filters.pais) return false;
     return true;
   });
 
@@ -65,6 +69,7 @@ export default function AdminRRHHView() {
     const r = roles.find(r => r.id === (e.roleId || e.role_id));
     return r?.name;
   }).filter(Boolean))];
+  const paises = [...new Set(empData.map(e => e.country).filter(Boolean))];
 
   const openEdit = (emp) => {
     setEditingEmp(emp);
@@ -155,6 +160,19 @@ export default function AdminRRHHView() {
 
   if (loading) return <div style={{ padding: '3rem', textAlign: 'center', color: '#5a5a58' }}>Cargando datos...</div>;
 
+  const filterOptions = [
+    { key: 'area', label: 'Área', values: areas },
+    { key: 'rol', label: 'Rol', values: roleNames },
+    { key: 'nivel', label: 'Nivel', values: ['1', '2', '3', '4', '5'] },
+  ];
+  if (isGlobalAdmin) {
+    filterOptions.unshift({ key: 'pais', label: 'País', values: paises });
+  }
+
+  const tableHeaders = isGlobalAdmin
+    ? ['Colaborador', 'Tipo', 'País', 'Área', 'Familia', 'Rol', 'Nivel', 'Editar', 'Requisitos']
+    : ['Colaborador', 'Tipo', 'Área', 'Familia', 'Rol', 'Nivel', 'Editar', 'Requisitos'];
+
   return (
     <div style={{ position: 'relative' }}>
       {editingEmp && (
@@ -232,6 +250,12 @@ export default function AdminRRHHView() {
         <StatCard label="Requisitos" value={reqs.length} color="gray" />
       </div>
 
+      {loadError && (
+        <div style={{ background: '#FCEBEB', color: '#791F1F', borderRadius: 8, padding: '10px 14px', fontSize: 12, marginBottom: '1rem' }}>
+          No se pudo conectar con el servidor ({loadError}). Mostrando datos de ejemplo.
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {tabs.map(t => (
@@ -252,16 +276,12 @@ export default function AdminRRHHView() {
       {tab === 'colaboradores' && (
         <Card>
           <SectionTitle>Colaboradores en {myCountry} · {filtered.length} registros</SectionTitle>
-          <FilterBar filters={filters} onChange={(key, val) => setFilters(f => ({ ...f, [key]: val }))} options={[
-            { key: 'area', label: 'Área', values: areas },
-            { key: 'rol', label: 'Rol', values: roleNames },
-            { key: 'nivel', label: 'Nivel', values: ['1', '2', '3', '4', '5'] },
-          ]} />
+          <FilterBar filters={filters} onChange={(key, val) => setFilters(f => ({ ...f, [key]: val }))} options={filterOptions} />
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '0.5px solid rgba(0,0,0,0.10)' }}>
-                  {['Colaborador', 'Tipo', 'Área', 'Familia', 'Rol', 'Nivel', 'Editar', 'Requisitos'].map(h => (
+                  {tableHeaders.map(h => (
                     <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 10, color: '#5a5a58', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -289,6 +309,9 @@ export default function AdminRRHHView() {
                           <span style={{ fontSize: 11, color: '#bbb' }}>Sin acceso</span>
                         )}
                       </td>
+                      {isGlobalAdmin && (
+                        <td style={{ padding: '11px 12px', color: '#5a5a58' }}>{emp.country}</td>
+                      )}
                       <td style={{ padding: '11px 12px', color: '#5a5a58' }}>{emp.area}</td>
                       <td style={{ padding: '11px 12px', color: '#5a5a58', fontSize: 12 }}>{emp.family_name || family.name || '—'}</td>
                       <td style={{ padding: '11px 12px' }}>{emp.role_name || role.name || '—'}</td>
@@ -303,7 +326,7 @@ export default function AdminRRHHView() {
                   );
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#5a5a58' }}>Sin colaboradores cargados. Usá la carga masiva para importar.</td></tr>
+                  <tr><td colSpan={tableHeaders.length} style={{ padding: '2rem', textAlign: 'center', color: '#5a5a58' }}>Sin colaboradores cargados. Usá la carga masiva para importar.</td></tr>
                 )}
               </tbody>
             </table>
