@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { getLevels } from '../data/mockData';
 import api from '../utils/api';
 import { Badge, LevelDots, Card, SectionTitle, Avatar, GradientBar } from '../components/UI';
 import ExplorarRolesTab from '../components/ExplorarRolesTab';
@@ -11,6 +10,7 @@ export default function ColaboradorView() {
   const [history, setHistory] = useState([]);
   const [reqValues, setReqValues] = useState([]);
   const [families, setFamilies] = useState([]);
+  const [competencies, setCompetencies] = useState([]);
   const [tab, setTab] = useState('perfil');
   const [loading, setLoading] = useState(true);
 
@@ -24,18 +24,18 @@ export default function ColaboradorView() {
       return Promise.all([
         api.employees.history(emp.id),
         api.employees.getRequirements(emp.id),
+        emp.family_id ? api.roles.familyCompetencies(emp.family_id) : Promise.resolve([]),
       ]);
-    }).then(([hist, reqs]) => {
+    }).then(([hist, reqs, comps]) => {
       setHistory(hist);
       setReqValues(reqs);
+      setCompetencies(comps);
     }).catch(console.error)
       .finally(() => setLoading(false));
   }, [currentUser]);
 
   if (loading) return <div style={{ padding: '3rem', textAlign: 'center', color: '#5a5a58' }}>Cargando...</div>;
   if (!employee) return <div style={{ padding: '3rem', textAlign: 'center', color: '#5a5a58' }}>Sin datos asignados. Contactá a tu administrador de RRHH.</div>;
-
-  const levels = getLevels(employee.role_id || employee.roleId);
 
   const tabs = [
     { id: 'perfil', label: 'Mi perfil' },
@@ -88,34 +88,45 @@ export default function ColaboradorView() {
             <div style={{ marginBottom: '1rem' }}>
               <LevelDots level={employee.current_level} />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {levels.map(l => {
-                const current = employee.current_level;
-                return (
-                  <div key={l.level} style={{
-                    display: 'flex', gap: 12, padding: '12px 14px', borderRadius: 10,
-                    background: l.level === current ? '#EEEDFE' : '#F9F5F1',
-                    border: l.level === current ? '1px solid #AFA9EC' : '0.5px solid transparent',
-                  }}>
-                    <div style={{
-                      width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                      background: l.level === current ? '#7F56FA' : '#D3D1C7',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 600,
-                      color: l.level === current ? 'white' : '#888780',
-                    }}>{l.level}</div>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 3, color: l.level === current ? '#3C3489' : '#131313' }}>
-                        Nivel {l.level}{l.level === current ? ' · actual' : ''}
+            {competencies.length === 0 ? (
+              <div style={{ fontSize: 13, color: '#5a5a58', padding: '0.5rem 0' }}>
+                Esta familia todavía no tiene matriz de competencias cargada.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {competencies.map(c => {
+                  const current = employee.current_level;
+                  const currentLevelData = c.levels.find(l => l.level === current);
+                  return (
+                    <div key={c.competency_name}>
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 4, height: 14, borderRadius: 2, background: '#7F56FA' }} />
+                        {c.competency_name}
                       </div>
-                      <div style={{ fontSize: 12, color: l.level === current ? '#534AB7' : '#5a5a58', lineHeight: 1.6 }}>
-                        {l.description}
+                      <div style={{
+                        display: 'flex', gap: 12, padding: '12px 14px', borderRadius: 10,
+                        background: '#EEEDFE', border: '1px solid #AFA9EC',
+                      }}>
+                        <div style={{
+                          width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                          background: '#7F56FA',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 11, fontWeight: 600, color: 'white',
+                        }}>{current}</div>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 3, color: '#3C3489' }}>
+                            Nivel {current} · actual
+                          </div>
+                          <div style={{ fontSize: 12, color: '#534AB7', lineHeight: 1.6 }}>
+                            {currentLevelData?.description || 'Sin descripción para este nivel.'}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </Card>
 
           {reqValues.length > 0 && (

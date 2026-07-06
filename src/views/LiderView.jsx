@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { roles as mockRoles, roleFamilies as mockFamilies, getLevels } from '../data/mockData';
+import { roles as mockRoles, roleFamilies as mockFamilies } from '../data/mockData';
 import api from '../utils/api';
 import { Badge, LevelDots, Modal, Card, SectionTitle, FilterBar, Avatar, SuccessToast } from '../components/UI';
 import ExplorarRolesTab from '../components/ExplorarRolesTab';
@@ -17,6 +17,7 @@ export default function LiderView() {
   const [filters, setFilters] = useState({});
   const [editingEmp, setEditingEmp] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [editCompetencies, setEditCompetencies] = useState([]);
   const [tab, setTab] = useState('equipo');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(true);
@@ -53,6 +54,13 @@ export default function LiderView() {
 
   const currentFamilyId = roles.find(r => r.id === parseInt(editForm.roleId))?.familyId || roles.find(r => r.id === parseInt(editForm.roleId))?.family_id;
   const familyRoles = roles.filter(r => (r.familyId || r.family_id) === currentFamilyId);
+
+  useEffect(() => {
+    if (!currentFamilyId) { setEditCompetencies([]); return; }
+    api.roles.familyCompetencies(currentFamilyId)
+      .then(setEditCompetencies)
+      .catch(() => setEditCompetencies([]));
+  }, [currentFamilyId]);
 
   const openEdit = (emp) => {
     setEditingEmp(emp);
@@ -140,9 +148,21 @@ export default function LiderView() {
                 }}>{n}</div>
               ))}
             </div>
-            <div style={{ fontSize: 12, color: '#534AB7', marginTop: 10, lineHeight: 1.6, background: '#EEEDFE', padding: '10px 12px', borderRadius: 8 }}>
-              {getLevels(parseInt(editForm.roleId)).find(l => l.level === parseInt(editForm.level))?.description}
-            </div>
+            {editCompetencies.length === 0 ? (
+              <div style={{ fontSize: 12, color: '#5a5a58', marginTop: 10 }}>Sin matriz de competencias cargada para esta familia.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                {editCompetencies.map(c => {
+                  const desc = c.levels.find(l => l.level === parseInt(editForm.level))?.description;
+                  return (
+                    <div key={c.competency_name} style={{ background: '#EEEDFE', padding: '9px 12px', borderRadius: 8 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: '#3C3489', marginBottom: 2 }}>{c.competency_name}</div>
+                      <div style={{ fontSize: 12, color: '#534AB7', lineHeight: 1.6 }}>{desc || '—'}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={saveEdit} style={{

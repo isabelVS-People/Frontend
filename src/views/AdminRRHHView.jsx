@@ -1,7 +1,7 @@
 import { employees as mockEmps, additionalRequirements as mockReqs } from '../data/mockData';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { roles as mockRoles, roleFamilies as mockFamilies, getLevels } from '../data/mockData';
+import { roles as mockRoles, roleFamilies as mockFamilies } from '../data/mockData';
 import api from '../utils/api';
 import { Badge, LevelDots, Modal, Card, SectionTitle, FilterBar, Avatar, StatCard, SuccessToast } from '../components/UI';
 import ExplorarRolesTab from '../components/ExplorarRolesTab';
@@ -20,6 +20,7 @@ export default function AdminRRHHView() {
   const [tab, setTab] = useState('colaboradores');
   const [editingEmp, setEditingEmp] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [editCompetencies, setEditCompetencies] = useState([]);
   const [showNewReq, setShowNewReq] = useState(false);
   const [newReq, setNewReq] = useState({ name: '', valueType: 'text', options: '' });
   const [editingReqEmp, setEditingReqEmp] = useState(null);
@@ -158,6 +159,13 @@ export default function AdminRRHHView() {
   const currentFamilyId = roles.find(r => r.id === parseInt(editForm.roleId))?.familyId || roles.find(r => r.id === parseInt(editForm.roleId))?.family_id;
   const familyRoles = roles.filter(r => (r.familyId || r.family_id) === currentFamilyId);
 
+  useEffect(() => {
+    if (!currentFamilyId) { setEditCompetencies([]); return; }
+    api.roles.familyCompetencies(currentFamilyId)
+      .then(setEditCompetencies)
+      .catch(() => setEditCompetencies([]));
+  }, [currentFamilyId]);
+
   if (loading) return <div style={{ padding: '3rem', textAlign: 'center', color: '#5a5a58' }}>Cargando datos...</div>;
 
   const filterOptions = [
@@ -199,9 +207,21 @@ export default function AdminRRHHView() {
             <input type="range" min="1" max="5" step="1" value={editForm.level}
               onChange={e => setEditForm(f => ({ ...f, level: e.target.value }))}
               style={{ width: '100%', accentColor: '#7F56FA' }} />
-            <div style={{ fontSize: 12, color: '#534AB7', marginTop: 10, lineHeight: 1.6, background: '#EEEDFE', padding: '10px 12px', borderRadius: 8 }}>
-              {getLevels(parseInt(editForm.roleId)).find(l => l.level === parseInt(editForm.level))?.description}
-            </div>
+            {editCompetencies.length === 0 ? (
+              <div style={{ fontSize: 12, color: '#5a5a58', marginTop: 10 }}>Sin matriz de competencias cargada para esta familia.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                {editCompetencies.map(c => {
+                  const desc = c.levels.find(l => l.level === parseInt(editForm.level))?.description;
+                  return (
+                    <div key={c.competency_name} style={{ background: '#EEEDFE', padding: '9px 12px', borderRadius: 8 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: '#3C3489', marginBottom: 2 }}>{c.competency_name}</div>
+                      <div style={{ fontSize: 12, color: '#534AB7', lineHeight: 1.6 }}>{desc || '—'}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={saveEdit} style={{ flex: 1, padding: '10px', borderRadius: 8, border: 'none', background: '#7F56FA', color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Guardar</button>
